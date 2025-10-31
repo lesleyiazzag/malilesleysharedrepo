@@ -70,6 +70,7 @@ void vm_create(pid_t pid){
   //initialize all ptes in the hardware page table with -1 for phys address and 00 for read and write                                                                                                  
 
   //add process to the all_processes global                                                                                                                                                                 
+
   process* p = new process();
   p->pid = pid;
 
@@ -81,7 +82,7 @@ void vm_create(pid_t pid){
 
   p->curr_valid_page = -1;
   all_processes[pid] = p;
-  cout << "created process" << pid << endl;
+  cout << "created process " << pid << endl;
  
 }
 
@@ -145,10 +146,10 @@ int vm_fault(void *addr, bool write_flag){
     else {//then must be read fault                                                                                                                                                                          
       pte->read_enable = 1; }
     //if on disk, read in                                                                                                                                                                                   
-    if (page->zero == false) {
-      disk_read(page->disk_location, ppage); }
+    //    if (page->zero == false) {
+    // disk_read(page->disk_location, ppage); }
     //if not, zero fill page                                                                                                                                                                                
-    else {
+    if(page->zero==true) {
       memset(&((char *)pm_physmem)[ppage * VM_PAGESIZE], 0, VM_PAGESIZE); }
     //      for(int i=0;i<VM_PAGESIZE;i++){                                                                                                                                                               
     //not totally sure this works... need to check                                                                                                                                                      
@@ -213,6 +214,7 @@ void * vm_extend(){// do NOT touch any ppages
   // return lowest address                                                                                                                                                                                  
 
   //check if we exceed the limit/if we have a free disk                                                                                                                                                     
+  cout<<"in extend"<<endl;
   if (curr_process.curr_valid_page + 1 > VM_ARENA_SIZE / VM_PAGESIZE) {
     return nullptr;
   }
@@ -232,8 +234,9 @@ void * vm_extend(){// do NOT touch any ppages
   curr_process.curr_valid_page = new_vpage;  // little confused about the function of curr_valid_page field                                                                                                 
 
   //virtual address = page number * page size + base???                                                                                                                                                     
-  uintptr_t vaddr = (uintptr_t)(VM_ARENA_BASEADDR + (new_vpage * VM_PAGESIZE));
-  return (void*)vaddr;
+    void* vaddr = VM_ARENA_BASEADDR + new_vpage * VM_PAGESIZE;
+  //  unsigned int vaddr = (unsigned int)(VM_ARENA_BASEADDR+(new_vpage*VM_PAGESIZE));
+  return vaddr;
 
 }
 
