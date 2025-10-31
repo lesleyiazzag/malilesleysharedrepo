@@ -191,7 +191,7 @@ for(int i=0;i<=p->curr_valid_page;i++){
 }
 
   for(int i=0;i<=p->curr_valid_page;i++){
-    if (p-> ptable.ptes[i].ppage != 129) {
+    if (p-> ptable.ptes[i].ppage != 129) {//confused about this line
         phys_free.push(p->ptable.ptes[i].ppage);}
     }
 
@@ -213,7 +213,7 @@ void * vm_extend(){// do NOT touch any ppages
   // return lowest address                                                                                                                                                                                  
 
   //check if we exceed the limit/if we have a free disk                                                                                                                                                     
-  if (curr_process.curr_valid_page + 1 >= VM_ARENA_SIZE / VM_PAGESIZE) {
+  if (curr_process.curr_valid_page + 1 > VM_ARENA_SIZE / VM_PAGESIZE) {
     return nullptr;
   }
   if (disk_blocks_counter.empty()) {
@@ -232,7 +232,7 @@ void * vm_extend(){// do NOT touch any ppages
   curr_process.curr_valid_page = new_vpage;  // little confused about the function of curr_valid_page field                                                                                                 
 
   //virtual address = page number * page size + base???                                                                                                                                                     
-  uintptr_t vaddr = (uintptr_t)VM_ARENA_BASEADDR + (new_vpage * VM_PAGESIZE);
+  uintptr_t vaddr = (uintptr_t)(VM_ARENA_BASEADDR + (new_vpage * VM_PAGESIZE));
   return (void*)vaddr;
 
 }
