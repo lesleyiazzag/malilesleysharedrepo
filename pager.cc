@@ -73,9 +73,10 @@ void vm_create(pid_t pid){
 
   process* p = new process();
   p->pid = pid;
+  p->ptable = *(new page_table_t);
 
   for (unsigned int i = 0; i < VM_ARENA_SIZE / VM_PAGESIZE; i++) {
-    p->ptable.ptes[i].ppage = 129;
+    p->ptable.ptes[i].ppage = 128;
     p->ptable.ptes[i].read_enable = 0;
     p->ptable.ptes[i].write_enable = 0;
   }
@@ -89,6 +90,7 @@ void vm_create(pid_t pid){
 
 void vm_switch(pid_t pid){
   process curr_process = *(all_processes[pid]);
+  page_table_base_register = &(curr_process.ptable);
 }
 //switches to a new process (just pointing to new arena of memory, update the curr_process global)                                                                                                     
 
@@ -234,7 +236,7 @@ void * vm_extend(){// do NOT touch any ppages
   curr_process.curr_valid_page = new_vpage;  // little confused about the function of curr_valid_page field                                                                                                 
 
   //virtual address = page number * page size + base???                                                                                                                                                     
-    void* vaddr = VM_ARENA_BASEADDR + new_vpage * VM_PAGESIZE;
+  void* vaddr = (void*)VM_ARENA_BASEADDR + new_vpage * VM_PAGESIZE;
   //  unsigned int vaddr = (unsigned int)(VM_ARENA_BASEADDR+(new_vpage*VM_PAGESIZE));
   return vaddr;
 
