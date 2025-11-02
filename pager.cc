@@ -77,7 +77,7 @@ void vm_create(pid_t pid){
   p->ptable = *temp;
 
   for (unsigned int i = 0; i < VM_ARENA_SIZE / VM_PAGESIZE; i++) {
-    p->ptable.ptes[i].ppage = 129;
+    p->ptable.ptes[i].ppage = -1;
     p->ptable.ptes[i].read_enable = 0;
     p->ptable.ptes[i].write_enable = 0;
   }
@@ -136,7 +136,7 @@ int vm_fault(void *addr, bool write_flag){
   page_table_entry_t* pte = &curr_process.ptable.ptes[vpage];
 
   //2. check if ppage is resident                                                                                                                                                                           
-  if (pte->ppage == 129) {
+  if (pte->ppage == -1) {
     // if not, get free page                                                                                                                                                                                
     unsigned long ppage = get_new_ppage();
     pte->ppage = ppage;
