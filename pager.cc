@@ -71,12 +71,13 @@ void vm_create(pid_t pid){
 
   //add process to the all_processes global                                                                                                                                                                 
 
-  process* p = new process();
+  process* p = new process;
   p->pid = pid;
-  p->ptable = *(new page_table_t);
+  page_table_t* temp = new page_table_t;
+  p->ptable = *temp;
 
   for (unsigned int i = 0; i < VM_ARENA_SIZE / VM_PAGESIZE; i++) {
-    p->ptable.ptes[i].ppage = 128;
+    p->ptable.ptes[i].ppage = 129;
     p->ptable.ptes[i].read_enable = 0;
     p->ptable.ptes[i].write_enable = 0;
   }
@@ -235,8 +236,11 @@ void * vm_extend(){// do NOT touch any ppages
   curr_process.v_pages[new_vpage] = new_page;
   curr_process.curr_valid_page = new_vpage;  // little confused about the function of curr_valid_page field                                                                                                 
 
-  //virtual address = page number * page size + base???                                                                                                                                                     
-  void* vaddr = (void*)VM_ARENA_BASEADDR + new_vpage * VM_PAGESIZE;
+  //virtual address = page number * page size + base???
+  
+  //  void* vaddr = (void*) *(VM_ARENA_BASEADDR) + new_vpage * VM_PAGESIZE;
+  unsigned int temp =  (0x60000000 + new_vpage * VM_PAGESIZE);
+  void* vaddr = (void*)(&temp);
   //  unsigned int vaddr = (unsigned int)(VM_ARENA_BASEADDR+(new_vpage*VM_PAGESIZE));
   return vaddr;
 
