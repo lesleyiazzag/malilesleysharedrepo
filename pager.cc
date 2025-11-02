@@ -64,11 +64,8 @@ void vm_init(unsigned int memory_pages, unsigned int disk_blocks){
 
 void vm_create(pid_t pid){
   //needs to run when a new process is created,                                                                                                                                                        
-
   //sets all the stuff each process needs (all the things in the process struct)                                                                                                                       
-
   //initialize all ptes in the hardware page table with -1 for phys address and 00 for read and write                                                                                                  
-
   //add process to the all_processes global                                                                                                                                                                 
 
   process* p = new process;
@@ -147,7 +144,8 @@ int vm_fault(void *addr, bool write_flag){
       pte->write_enable = 1;
       page->dirty = 1; }
     else {//then must be read fault                                                                                                                                                                          
-      pte->read_enable = 1; }
+      pte->read_enable = 1;
+      pte -> write_enable = 0; }
     //if on disk, read in                                                                                                                                                                                   
     //    if (page->zero == false) {
     // disk_read(page->disk_location, ppage); }
@@ -166,6 +164,7 @@ int vm_fault(void *addr, bool write_flag){
       page->dirty=1;}
     else{
       pte->read_enable =1;
+      pte->write_enable=0;
       if(page->dirty==1){
         pte->write_enable=1;}}
     page->reference=1;}
