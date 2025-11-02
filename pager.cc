@@ -39,7 +39,7 @@ queue<unsigned long> phys_free;
 queue<unsigned int> clock_queue;
 
 //current process, used when switching processes                                                                                                                                                       
-process curr_process;
+process* curr_process;
 
 //map of process ids to process struct pointers                                                                                                                                                        
 map<int,process*> all_processes;
@@ -90,8 +90,8 @@ void vm_create(pid_t pid){
 
 
 void vm_switch(pid_t pid){
-  process curr_process = *(all_processes[pid]);
-  page_table_base_register = &(curr_process.ptable);
+  curr_process = all_processes[pid];
+  page_table_base_register = &(curr_process->ptable);
 }
 //switches to a new process (just pointing to new arena of memory, update the curr_process global)                                                                                                     
 
@@ -128,12 +128,12 @@ int vm_fault(void *addr, bool write_flag){
   uintptr_t address = (uintptr_t) addr;
   int vpage = (address - (uintptr_t)VM_ARENA_BASEADDR) / VM_PAGESIZE;
   //1. is the address valid. No? return -1.                                                                                                                                                                 
-  if ((all_processes.find(curr_process.pid)  == all_processes.end()) || curr_process.v_pages.find(vpage) == curr_process.v_pages.end()) {
+  if ((all_processes.find(curr_process->pid)  == all_processes.end()) || curr_process->v_pages.find(vpage) == curr_process->v_pages.end()) {
     return -1;
   }
 
-  vm_page* page = curr_process.v_pages[vpage];
-  page_table_entry_t* pte = &curr_process.ptable.ptes[vpage];
+  vm_page* page = curr_process->v_pages[vpage];
+  page_table_entry_t* pte = &(curr_process->ptable.ptes[vpage]);
 
   //2. check if ppage is resident                                                                                                                                                                           
   if (pte->ppage == -1) {
@@ -186,7 +186,7 @@ void vm_destroy(){
   //probably other things                                                                                                                                                                              
 
   //  return 0;}                         
-process* p = &curr_process;
+process* p = curr_process;
 for(int i=0;i<=p->curr_valid_page;i++){
   if (p->v_pages.count(i)) {
     disk_blocks_counter.push(p->v_pages[i]->disk_location);
@@ -218,7 +218,7 @@ void * vm_extend(){// do NOT touch any ppages
 
   //check if we exceed the limit/if we have a free disk                                                                                                                                                     
   cout<<"in extend"<<endl;
-  if (curr_process.curr_valid_page + 1 > VM_ARENA_SIZE / VM_PAGESIZE) {
+  if (curr_process->curr_valid_page + 1 > VM_ARENA_SIZE / VM_PAGESIZE) {
     return nullptr;
   }
   if (disk_blocks_counter.empty()) {
@@ -227,14 +227,14 @@ void * vm_extend(){// do NOT touch any ppages
 
  // make new virtual page at new_vpage index in page table                                                                                                                                                 
   /// give it a disk block :)                                                                                                                                                                               
-  int new_vpage = curr_process.curr_valid_page + 1;
+  int new_vpage = curr_process->curr_valid_page + 1;
   vm_page* new_page = new vm_page();
   new_page->disk_location = disk_blocks_counter.front(); //check this                                                                                                                                       
   disk_blocks_counter.pop();
 
   // add to the process struct map                                                                                                                                                                          
-  curr_process.v_pages[new_vpage] = new_page;
-  curr_process.curr_valid_page = new_vpage;  // little confused about the function of curr_valid_page field                                                                                                 
+  curr_process->v_pages[new_vpage] = new_page;
+  curr_process->curr_valid_page = new_vpage;  // little confused about the function of curr_valid_page field                                                                                                 
 
   //virtual address = page number * page size + base???
   
