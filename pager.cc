@@ -59,7 +59,7 @@ void vm_init(unsigned int memory_pages, unsigned int disk_blocks){
   for (unsigned int i = 0; i < disk_blocks; i++) {
     disk_blocks_counter.push(i);
   }
-  cout << "pager initialized with " << memory_pages << " physical pages and " << disk_blocks << " disk blocks.\n";
+  //cout << "pager initialized with " << memory_pages << " physical pages and " << disk_blocks << " disk blocks.\n";
 }
 
 void vm_create(pid_t pid){
@@ -79,9 +79,9 @@ void vm_create(pid_t pid){
     p->ptable.ptes[i].write_enable = 0;
   }
 
-  p->curr_valid_page = -1;
+  p->curr_valid_page = 0; // changed from -1
   all_processes[pid] = p;
-  cout << "created process " << pid << endl;
+  //cout << "created process " << pid << endl;
  
 }
 
@@ -95,7 +95,7 @@ void vm_switch(pid_t pid){
 //helper function for gettnig new physical page, will implement clock here later                                                                                                                            
 unsigned long get_new_ppage(){
   if(phys_free.empty()){
-      cout<<"no more free pages. time to evict!"<<endl;
+      //cout<<"no more free pages. time to evict!"<<endl;
       return -1;}
   unsigned long ppage = phys_free.front();
   phys_free.pop();
@@ -105,19 +105,12 @@ int vm_fault(void *addr, bool write_flag){
 
  //cases:                                                                                                                                                                                                   
   //1. is the address valid. No? return -1.                                                                                                                                                            
-
   //2. is page resident                                                                                                                                                                                
-
   //    if not, get free page (ues helper function, may need to run the clock), update page table, update read and write bits based on type of fault                                                   
-
   //         is virtual page on disk (not zero)? If so, populate page from disk. Else, zero fill the page.                                                                                             
-
   //    if yes,                                                                                                                                                                                        
-
   //        read fault? if dirty, set r/w to 1.(the clock had changed permissions) if clean, set r=1.                                                                                                  
-
   //        write fault? set r/w = 1 //set dirty bit on all write faults                                                                                                                               
-
   //        clock must have run, set resident                                                                                                                                                               
 
 
@@ -138,7 +131,7 @@ int vm_fault(void *addr, bool write_flag){
     unsigned long ppage = get_new_ppage();
     pte->ppage = ppage;
     page->reference = 1;
-    //was is a write fault?                                                                                                                                                                                 
+    //was it a write fault?                                                                                                                                                                                 
     if (write_flag == 1) {
       pte->read_enable = 1;
       pte->write_enable = 1;
@@ -158,7 +151,7 @@ int vm_fault(void *addr, bool write_flag){
   }
   //else if resident                        
   else{
-    if(write_flag==1){
+    if(write_flag){
       pte->read_enable=1;
       pte->write_enable = 1;
       page->dirty=1;}
@@ -185,25 +178,25 @@ void vm_destroy(){
   //probably other things                                                                                                                                                                              
 
   //  return 0;}                         
-process* p = curr_process;
-for(int i=0;i<=p->curr_valid_page;i++){
-  if (p->v_pages.count(i)) {
-    disk_blocks_counter.push(p->v_pages[i]->disk_location);
-    delete p->v_pages[i];
-  }
-}
+// process* p = curr_process;
+// for(int i=0;i<=p->curr_valid_page;i++){
+//   if (p->v_pages.count(i)) {
+//     disk_blocks_counter.push(p->v_pages[i]->disk_location);
+//     delete p->v_pages[i];
+//   }
+// }
 
-  for(int i=0;i<=p->curr_valid_page;i++){
-    if (p-> ptable.ptes[i].ppage != 129) {//confused about this line
-        phys_free.push(p->ptable.ptes[i].ppage);}
-    }
+//   for(int i=0;i<=p->curr_valid_page;i++){
+//     if (p-> ptable.ptes[i].ppage != 129) {//confused about this line
+//         phys_free.push(p->ptable.ptes[i].ppage);}
+//     }
 
-  if (all_processes.count(p->pid)) {
-    delete all_processes[p->pid];
-    all_processes.erase(p->pid);
-  }
+//   if (all_processes.count(p->pid)) {
+//     delete all_processes[p->pid];
+//     all_processes.erase(p->pid);
+//   }
   
-  cout << "destroyed process" << p->pid << endl;
+//   cout << "destroyed process" << p->pid << endl;
 }
 
 
@@ -216,7 +209,7 @@ void * vm_extend(){// do NOT touch any ppages
   // return lowest address                                                                                                                                                                                  
 
   //check if we exceed the limit/if we have a free disk                                                                                                                                                     
-  cout<<"in extend"<<endl;
+  //cout<<"in extend"<<endl;
   if (curr_process->curr_valid_page + 1 > VM_ARENA_SIZE / VM_PAGESIZE) {
     return nullptr;
   }
@@ -238,8 +231,8 @@ void * vm_extend(){// do NOT touch any ppages
   //virtual address = page number * page size + base???
   
   //  void* vaddr = (void*) *(VM_ARENA_BASEADDR) + new_vpage * VM_PAGESIZE;
-  unsigned int temp =  (0x60000000 + new_vpage * VM_PAGESIZE);
-  void* vaddr = (void*)(&temp);
+ 
+  void* vaddr = (void*)(((uintptr_t)VM_ARENA_BASEADDR + (new_vpage * VM_PAGESIZE)));
   //  unsigned int vaddr = (unsigned int)(VM_ARENA_BASEADDR+(new_vpage*VM_PAGESIZE));
   return vaddr;
 
@@ -248,3 +241,4 @@ void * vm_extend(){// do NOT touch any ppages
 int vm_syslog(void *message, unsigned int len){
   return 0;
 }
+
