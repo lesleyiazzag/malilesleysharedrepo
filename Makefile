@@ -15,3 +15,6 @@ stop:
 
 clean:
 	rm *~ pager sample 
+
+submit:
+	/usr/cs-local/432/bin/submit432 2 pager.cc sample.cc
