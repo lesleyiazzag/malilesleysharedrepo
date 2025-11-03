@@ -219,20 +219,21 @@ void * vm_extend(){// do NOT touch any ppages
 
  // make new virtual page at new_vpage index in page table                                                                                                                                                 
   /// give it a disk block :)                                                                                                                                                                               
-  int new_vpage = curr_process->curr_valid_page + 1;
+  int new_vpage = curr_process->curr_valid_page ;
   vm_page* new_page = new vm_page();
   new_page->disk_location = disk_blocks_counter.front(); //check this                                                                                                                                       
   disk_blocks_counter.pop();
 
   // add to the process struct map                                                                                                                                                                          
   curr_process->v_pages[new_vpage] = new_page;
-  curr_process->curr_valid_page = new_vpage;  // little confused about the function of curr_valid_page field                                                                                                 
+  //  curr_process->curr_valid_page = new_vpage;  // little confused about the function of curr_valid_page field                                                                                                 
 
   //virtual address = page number * page size + base???
   
   //  void* vaddr = (void*) *(VM_ARENA_BASEADDR) + new_vpage * VM_PAGESIZE;
  
   void* vaddr = (void*)(((uintptr_t)VM_ARENA_BASEADDR + (new_vpage * VM_PAGESIZE)));
+   curr_process->curr_valid_page = new_vpage+1;
   //  unsigned int vaddr = (unsigned int)(VM_ARENA_BASEADDR+(new_vpage*VM_PAGESIZE));
   return vaddr;
 
