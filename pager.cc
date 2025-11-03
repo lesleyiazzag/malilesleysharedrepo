@@ -23,7 +23,8 @@ struct vm_page{
 struct process{
   int pid;
   page_table_t ptable; // loop over every entry in array and set ppage field to unsigned int -1, RW fields to 0                                                                                             
-  int curr_valid_page=0;
+  int curr_vpage=0;
+  uintptr_t curr_addr=(uintptr_t)VM_ARENA_BASEADDR;
   map<int,vm_page*> v_pages;}; // vmfault passed in VA, determine if VA is valid. to check calculate page from address and see if that same address in map                                                  
 
 
@@ -79,7 +80,7 @@ void vm_create(pid_t pid){
     p->ptable.ptes[i].write_enable = 0;
   }
 
-  p->curr_valid_page = 0; // changed from -1
+  //  p->curr_valid_page = 0; // changed from -1
   all_processes[pid] = p;
   //cout << "created process " << pid << endl;
  
@@ -210,7 +211,7 @@ void * vm_extend(){// do NOT touch any ppages
 
   //check if we exceed the limit/if we have a free disk                                                                                                                                                     
   //cout<<"in extend"<<endl;
-  if (curr_process->curr_valid_page + 1 > VM_ARENA_SIZE / VM_PAGESIZE) {
+  if (curr_process->curr_vpage + 1 > VM_ARENA_SIZE / VM_PAGESIZE) {
     return nullptr;
   }
   if (disk_blocks_counter.empty()) {
@@ -219,21 +220,23 @@ void * vm_extend(){// do NOT touch any ppages
 
  // make new virtual page at new_vpage index in page table                                                                                                                                                 
   /// give it a disk block :)                                                                                                                                                                               
-  int new_vpage = curr_process->curr_valid_page ;
+  int vpage = curr_process->curr_vpage ;
   vm_page* new_page = new vm_page();
   new_page->disk_location = disk_blocks_counter.front(); //check this                                                                                                                                       
   disk_blocks_counter.pop();
 
   // add to the process struct map                                                                                                                                                                          
-  curr_process->v_pages[new_vpage] = new_page;
+  curr_process->v_pages[vpage] = new_page;
   //  curr_process->curr_valid_page = new_vpage;  // little confused about the function of curr_valid_page field                                                                                                 
 
   //virtual address = page number * page size + base???
   
   //  void* vaddr = (void*) *(VM_ARENA_BASEADDR) + new_vpage * VM_PAGESIZE;
  
-  void* vaddr = (void*)(((uintptr_t)VM_ARENA_BASEADDR + (new_vpage * VM_PAGESIZE)));
-   curr_process->curr_valid_page = new_vpage+1;
+  //  void* vaddr = (void*)(((uintptr_t)VM_ARENA_BASEADDR + (new_vpage * VM_PAGESIZE)));
+  void* vaddr = (void*)(curr_process->curr_addr);
+   curr_process->curr_vpage = vpage+1;
+   curr_process->curr_addr = curr_process->curr_addr+VM_PAGESIZE;
   //  unsigned int vaddr = (unsigned int)(VM_ARENA_BASEADDR+(new_vpage*VM_PAGESIZE));
   return vaddr;
 
