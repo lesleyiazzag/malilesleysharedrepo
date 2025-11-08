@@ -1,6 +1,5 @@
 #include "vm_pager.h"
 #include <iostream>
-//#include <std>                                                                                                                                                                                            
 #include <queue>
 #include<map>
 #include <cstdint>
@@ -37,7 +36,7 @@ queue<unsigned int> disk_blocks_counter;
 queue<unsigned long> phys_free;
 
 //queue for the clock, implement in helper function later                                                                                                                                              
-queue<unsigned int> clock_queue;
+queue<vm_page*> clock_queue;
 
 //current process, used when switching processes                                                                                                                                                       
 process* curr_process;
@@ -93,14 +92,41 @@ void vm_switch(pid_t pid){
 }
 //switches to a new process (just pointing to new arena of memory, update the curr_process global)                                                                                                     
 
-//helper function for gettnig new physical page, will implement clock here later                                                                                                                            
-unsigned long get_new_ppage(){
+//helper function for gettnig new physical page, will implement clock here later
+
+unsigned long run_clock(){
+  if(clock_queue.empty()){
+      return -1;}
+  bool found = false;
+  while(found == false){
+    vm_page* temp = clock_queue.front();
+    if(temp->reference==1){
+      temp->reference = 0;
+      clock_queue.pop();
+      clock_queue.push(temp);}
+    else{
+      if(temp->dirty==1){
+	//write page out to disk, need to check syntax
+	//do I need to zero fill the page before handing it off?
+      }
+      //I think this gets the address of the page we are handing over
+      found = true;
+      return &(curr_process->ptable.ptes[temp->pte]);
+      
+    }}
+  return -1;}
+unsigned long get_new_ppage(vm_page* v_page){
   if(phys_free.empty()){
       //cout<<"no more free pages. time to evict!"<<endl;
-      return -1;}
+    return run_clock();}
+  else{//if there are still unused ppages
   unsigned long ppage = phys_free.front();
   phys_free.pop();
+  //first time that page is assigned, need to add to the clock queue
+  v_page->reference= 1;
+  clock_queue.push(v_page);
   return ppage;}
+}
 
 int vm_fault(void *addr, bool write_flag){
 
@@ -129,7 +155,7 @@ int vm_fault(void *addr, bool write_flag){
   //2. check if ppage is resident                                                                                                                                                                           
   if (pte->ppage == 129) {
     // if not, get free page                                                                                                                                                                                
-    unsigned long ppage = get_new_ppage();
+    unsigned long ppage = get_new_ppage(page);
     pte->ppage = ppage;
     page->reference = 1;
     //was it a write fault?                                                                                                                                                                                 
@@ -146,9 +172,6 @@ int vm_fault(void *addr, bool write_flag){
     //if not, zero fill page                                                                                                                                                                                
     if(page->zero==true) {
       memset(&((char *)pm_physmem)[ppage * VM_PAGESIZE], 0, VM_PAGESIZE); }
-    //      for(int i=0;i<VM_PAGESIZE;i++){                                                                                                                                                               
-    //not totally sure this works... need to check                                                                                                                                                      
-    //((char *)pm_physmem)[vpage+i]=0;}}                                                                                                                                                                
   }
   //else if resident                        
   else{
