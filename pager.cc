@@ -111,12 +111,15 @@ unsigned long run_clock(){
     else{
       if(temp->dirty==1){
 	disk_write(temp->disk_location,temp_pte->ppage);
+
 	//write page out to disk, need to check syntax
 	//do I need to zero fill the page before handing it off?
       }
       //I think this gets the address of the page we are handing over
       found = true;
       unsigned long val = temp_pte->ppage;
+      //set resident to false
+      temp_pte->ppage=129;
       return val;
       
     }}
