@@ -100,18 +100,24 @@ unsigned long run_clock(){
   bool found = false;
   while(found == false){
     vm_page* temp = clock_queue.front();
+    page_table_entry_t* temp_pte = &(curr_process->ptable.ptes[temp->pte]);
     if(temp->reference==1){
+      //if referenced, set ref bit, read and write permissions so that next reference will fault, push to back of queue
       temp->reference = 0;
+      temp_pte->read_enable=0;
+      temp_pte->write_enable=0;
       clock_queue.pop();
       clock_queue.push(temp);}
     else{
       if(temp->dirty==1){
+	disk_write(temp->disk_location,temp_pte->ppage);
 	//write page out to disk, need to check syntax
 	//do I need to zero fill the page before handing it off?
       }
       //I think this gets the address of the page we are handing over
       found = true;
-      return &(curr_process->ptable.ptes[temp->pte]);
+      unsigned long val = (unsigned long)temp_pte;
+      return val;
       
     }}
   return -1;}
