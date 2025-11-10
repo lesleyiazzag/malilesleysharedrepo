@@ -116,11 +116,12 @@ unsigned long run_clock(){
       }
       //I think this gets the address of the page we are handing over
       found = true;
-      unsigned long val = (unsigned long)temp_pte;
+      unsigned long val = temp_pte->ppage;
       return val;
       
     }}
   return -1;}
+
 unsigned long get_new_ppage(vm_page* v_page){
   if(phys_free.empty()){
       //cout<<"no more free pages. time to evict!"<<endl;
