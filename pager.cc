@@ -15,6 +15,7 @@ struct vm_page{
   int reference = 0;
   unsigned int disk_location;
   bool zero = true;
+  int owner_pid;
 };
 
 //addresses are from the starting place in mem, find pte number by dividing by page size                                                                                                            
@@ -70,8 +71,8 @@ void vm_create(pid_t pid){
 
   process* p = new process;
   p->pid = pid;
-  page_table_t* temp = new page_table_t;
-  p->ptable = *temp;
+  // page_table_t* temp = new page_table_t;
+  // p->ptable = *temp; // temp never gets freed; is this a memory leak?
 
   for (unsigned int i = 0; i < VM_ARENA_SIZE / VM_PAGESIZE; i++) {
     p->ptable.ptes[i].ppage = 129;
@@ -100,7 +101,10 @@ unsigned long run_clock(){
   bool found = false;
   while(found == false){
     vm_page* temp = clock_queue.front();
-    page_table_entry_t* temp_pte = &(curr_process->ptable.ptes[temp->pte]);
+    // Find the process that owns the virtual page
+    process* owner = all_processes[temp->owner_pid];
+    //page_table_entry_t* temp_pte = &(curr_process->ptable.ptes[temp->pte]);
+    page_table_entry_t* temp_pte = &(owner->ptable.ptes[temp->pte]);
     if(temp->reference==1){
       //if referenced, set ref bit, read and write permissions so that next reference will fault, push to back of queue
       temp->reference = 0;
@@ -110,16 +114,18 @@ unsigned long run_clock(){
       clock_queue.push(temp);}
     else{
       if(temp->dirty==1){
-	disk_write(temp->disk_location,temp_pte->ppage);
+	      disk_write(temp->disk_location,temp_pte->ppage);
 
-	//write page out to disk, need to check syntax
-	//do I need to zero fill the page before handing it off?
+      //write page out to disk, need to check syntax
+      //do I need to zero fill the page before handing it off?
       }
       //I think this gets the address of the page we are handing over
       found = true;
       unsigned long val = temp_pte->ppage;
       //set resident to false
       temp_pte->ppage=129;
+      temp_pte->read_enable=0;
+      temp_pte->write_enable=0;
       return val;
       
     }}
@@ -199,38 +205,63 @@ int vm_fault(void *addr, bool write_flag){
   return 0;}
 
 
+// Do we need to remove the process' pages from the clock queue??
+void vm_destroy(){                        
+  process* p = curr_process;
+  if (p == nullptr) return;
 
-void vm_destroy(){
-  //push disk blocks for all virtual pages of process back on disk block queue                                                                                                                         
+  // remove pages from the clock queue??????
+  queue<vm_page*> new_clock;
+    while (!clock_queue.empty()) {
+        vm_page* vpage = clock_queue.front();
+        clock_queue.pop();
+        if (vpage->owner_pid != p->pid) {
+            new_clock.push(vpage);
+        }
+    }
+    clock_queue = new_clock;
 
-  //push phys pages for all virual pages of process back on phys page queue                                                                                                                            
+  // Free the virtual pages and physical pages
+  for (auto& entry : p->v_pages) {
+    vm_page* vpage = entry.second;
+    page_table_entry_t* pte = &(p->ptable.ptes[entry.first]);
 
-  //remove process from all_processes                                                                                                                                                                  
+    //push disk blocks for all virtual pages of process back on disk block queue 
+    disk_blocks_counter.push(vpage->disk_location);
 
-  //delete anything that got a new                                                                                                                                                                     
+    // if resident, return ppage to free list
+    if (pte->ppage != 129) {
+      phys_free.push(pte->ppage);
+    }
 
-  //probably other things                                                                                                                                                                              
+    delete vpage;
+  }
+  p->v_pages.clear();  
 
-  //  return 0;}                         
-// process* p = curr_process;
-// for(int i=0;i<=p->curr_valid_page;i++){
-//   if (p->v_pages.count(i)) {
-//     disk_blocks_counter.push(p->v_pages[i]->disk_location);
-//     delete p->v_pages[i];
-//   }
-// }
+  //remove process from all_processes   
+  all_processes.erase(p->pid);
+  delete p;
+  curr_process = nullptr;
 
-//   for(int i=0;i<=p->curr_valid_page;i++){
-//     if (p-> ptable.ptes[i].ppage != 129) {//confused about this line
-//         phys_free.push(p->ptable.ptes[i].ppage);}
-//     }
 
-//   if (all_processes.count(p->pid)) {
-//     delete all_processes[p->pid];
-//     all_processes.erase(p->pid);
-//   }
-  
-//   cout << "destroyed process" << p->pid << endl;
+  // for(int i=0;i<=p->curr_valid_page;i++){
+  //   if (p->v_pages.count(i)) {
+  //     disk_blocks_counter.push(p->v_pages[i]->disk_location);
+  //     delete p->v_pages[i];
+  //   }
+  // }
+
+  //   for(int i=0;i<=p->curr_valid_page;i++){
+  //     if (p-> ptable.ptes[i].ppage != 129) {//confused about this line
+  //         phys_free.push(p->ptable.ptes[i].ppage);}
+  //     }
+
+  //   if (all_processes.count(p->pid)) {
+  //     delete all_processes[p->pid];
+  //     all_processes.erase(p->pid);
+  //   }
+    
+  //   cout << "destroyed process" << p->pid << endl;
 }
 
 
@@ -255,6 +286,7 @@ void * vm_extend(){// do NOT touch any ppages
   /// give it a disk block :)                                                                                                                                                                               
   int vpage = curr_process->curr_vpage ;
   vm_page* new_page = new vm_page();
+  new_page->owner_pid = curr_process->pid;
   new_page->disk_location = disk_blocks_counter.front(); //check this                                                                                                                                       
   disk_blocks_counter.pop();
 
