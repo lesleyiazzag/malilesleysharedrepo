@@ -134,14 +134,19 @@ unsigned long run_clock(){
 unsigned long get_new_ppage(vm_page* v_page){
   if(phys_free.empty()){
       //cout<<"no more free pages. time to evict!"<<endl;
-    return run_clock();}
+    unsigned long ppage = run_clock();
+    v_page->reference= 1;
+    clock_queue.push(v_page);
+    return ppage;
+    }
   else{//if there are still unused ppages
-  unsigned long ppage = phys_free.front();
-  phys_free.pop();
-  //first time that page is assigned, need to add to the clock queue
-  v_page->reference= 1;
-  clock_queue.push(v_page);
-  return ppage;}
+    unsigned long ppage = phys_free.front();
+    phys_free.pop();
+    //first time that page is assigned, need to add to the clock queue
+    v_page->reference= 1;
+    clock_queue.push(v_page);
+    return ppage;
+  }
 }
 
 int vm_fault(void *addr, bool write_flag){
