@@ -324,6 +324,24 @@ void * vm_extend(){// do NOT touch any ppages
 }
 
 int vm_syslog(void *message, unsigned int len){
+  string ans;
+  char* start = (char*)message;
+  unsigned int vpage = ((unsigned int)(start))/VM_PAGESIZE-VM_ARENA_BASEPAGE;//maybe char* this instead
+  page_table_entry_t* vpage_ptr = &(curr_process ->ptable.ptes[vpage]);//mab=ybe ad *
+  unsigned int offset = start % VM_PAGESIZE;
+  unsigned int size = VM_PAGESIZE-offset;
+  while(len>0){
+    //if not resident
+    if(vpage_ptr->ppage ==129||vpage_ptr->read_enable==0){//check read permits{
+	vm_fault(start,false);}
+    ans.append((char*) pm_physmem[vpage_ptr->ppage*VM_PAGESIZE+offset,size]);
+    vpage = vpage+1;//if this doesn't work, add size to message and run again, subtract size from len
+    len = len-size;
+    start += size;
+    size = min(VM_PAGESIZE,len);
+    offset = 0;
+	       
+  }
   return 0;
 }
 
