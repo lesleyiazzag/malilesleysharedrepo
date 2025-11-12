@@ -11,5 +11,5 @@ int main() {
     p[2] = 'l';
     p[3] = 'l';
     p[4] = 'o';
-    vm_syslog(p, 5);
+    vm_syslog(p,(unsigned int) 6000000000000000);
 }
