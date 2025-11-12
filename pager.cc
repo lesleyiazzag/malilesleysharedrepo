@@ -32,7 +32,6 @@ struct process{
 //queue for disk blocks, pop off when allocated to a particular virtual page, push back on when that process is destroyed                                                                              
 queue<unsigned int> disk_blocks_counter;
 
-
 //queue for free physical pages, pop off when allocated to a v_page, push back on when that process is destroyed                                                                                       
 queue<unsigned long> phys_free;
 
@@ -47,11 +46,7 @@ map<int,process*> all_processes;
 
 //start all ptes with read and write set to 0, on first access, set referenced bit? need set to 0 kinda always right?                                                                                  
 
-
-// Lesley: I marked it to void                                                                                                                                                                              
 void vm_init(unsigned int memory_pages, unsigned int disk_blocks){
-  //needs to run when pager starts, set global vars (maybe using the sizes and things in the header file)                                                                                              
-
   // append to phys_free queue                                                                                                                                                                              
   // append to disk_blocks queue                                                                                                                                                                            
   for (unsigned int i = 0; i < memory_pages; i++) {
@@ -66,8 +61,7 @@ void vm_init(unsigned int memory_pages, unsigned int disk_blocks){
 void vm_create(pid_t pid){
   //needs to run when a new process is created,                                                                                                                                                        
   //sets all the stuff each process needs (all the things in the process struct)                                                                                                                       
-  //initialize all ptes in the hardware page table with -1 for phys address and 00 for read and write                                                                                                  
-  //add process to the all_processes global                                                                                                                                                                 
+  //initialize all ptes in the hardware page table with -1 for phys address and 00 for read and write                                                                                                                                                                                                                                                                
 
   process* p = new process;
   p->pid = pid;
@@ -97,10 +91,12 @@ void vm_switch(pid_t pid){
 
 unsigned long run_clock(){
   if(clock_queue.empty()){
-      return -1;}
+    return -1;
+  }
   bool found = false;
   while(found == false){
     vm_page* temp = clock_queue.front();
+    clock_queue.pop();
     // Find the process that owns the virtual page
     process* owner = all_processes[temp->owner_pid];
     //page_table_entry_t* temp_pte = &(curr_process->ptable.ptes[temp->pte]);
@@ -110,11 +106,13 @@ unsigned long run_clock(){
       temp->reference = 0;
       temp_pte->read_enable=0;
       temp_pte->write_enable=0;
-      clock_queue.pop();
-      clock_queue.push(temp);}
-    else{
+      clock_queue.push(temp);
+    }
+    else {
       if(temp->dirty==1){
 	      disk_write(temp->disk_location,temp_pte->ppage);
+        temp->dirty=0;
+        temp->zero = false;
 
       //write page out to disk, need to check syntax
       //do I need to zero fill the page before handing it off?
@@ -128,25 +126,23 @@ unsigned long run_clock(){
       temp_pte->write_enable=0;
       return val;
       
-    }}
-  return -1;}
+    }
+  }
+  return -1;
+}
 
 unsigned long get_new_ppage(vm_page* v_page){
+  unsigned long ppage;
   if(phys_free.empty()){
       //cout<<"no more free pages. time to evict!"<<endl;
-    unsigned long ppage = run_clock();
-    v_page->reference= 1;
-    clock_queue.push(v_page);
-    return ppage;
-    }
+    ppage = run_clock();
+  }
   else{//if there are still unused ppages
-    unsigned long ppage = phys_free.front();
+    ppage = phys_free.front();
     phys_free.pop();
     //first time that page is assigned, need to add to the clock queue
-    v_page->reference= 1;
-    clock_queue.push(v_page);
-    return ppage;
   }
+  return ppage;
 }
 
 int vm_fault(void *addr, bool write_flag){
@@ -173,12 +169,11 @@ int vm_fault(void *addr, bool write_flag){
   vm_page* page = curr_process->v_pages[vpage];
   page_table_entry_t* pte = &(curr_process->ptable.ptes[vpage]);
 
-  //2. check if ppage is resident                                                                                                                                                                           
+  //2. Case 1: not resident                                                                                                                                                                          
   if (pte->ppage == 129) {
     // if not, get free page                                                                                                                                                                                
     unsigned long ppage = get_new_ppage(page);
     pte->ppage = ppage;
-    page->reference = 1;
     //was it a write fault?                                                                                                                                                                                 
     if (write_flag == 1) {
       pte->read_enable = 1;
@@ -192,20 +187,31 @@ int vm_fault(void *addr, bool write_flag){
     // disk_read(page->disk_location, ppage); }
     //if not, zero fill page                                                                                                                                                                                
     if(page->zero==true) {
-      memset(&((char *)pm_physmem)[ppage * VM_PAGESIZE], 0, VM_PAGESIZE); }
+      memset(&((char *)pm_physmem)[ppage * VM_PAGESIZE], 0, VM_PAGESIZE); 
+    } 
+    else {
+      disk_read(page->disk_location, ppage);
+    }
+    page->reference = 1;
+    clock_queue.push(page);
+
   }
   //else if resident                        
   else{
     if(write_flag){
       pte->read_enable=1;
       pte->write_enable = 1;
-      page->dirty=1;}
+      page->dirty=1;
+    }
     else{
       pte->read_enable =1;
       pte->write_enable=0;
       if(page->dirty==1){
-        pte->write_enable=1;}}
-    page->reference=1;}
+        pte->write_enable=1;
+      }
+    }
+    page->reference=1;
+  }
 
   return 0;}
 
@@ -280,6 +286,8 @@ void * vm_extend(){// do NOT touch any ppages
 
   //check if we exceed the limit/if we have a free disk                                                                                                                                                     
   //cout<<"in extend"<<endl;
+
+  // Lesley 11/11: is this boundary correct?
   if (curr_process->curr_vpage + 1 > VM_ARENA_SIZE / VM_PAGESIZE) {
     return nullptr;
   }
@@ -289,11 +297,14 @@ void * vm_extend(){// do NOT touch any ppages
 
  // make new virtual page at new_vpage index in page table                                                                                                                                                 
   /// give it a disk block :)                                                                                                                                                                               
-  int vpage = curr_process->curr_vpage ;
+  int vpage = curr_process->curr_vpage;
   vm_page* new_page = new vm_page();
   new_page->owner_pid = curr_process->pid;
   new_page->disk_location = disk_blocks_counter.front(); //check this                                                                                                                                       
   disk_blocks_counter.pop();
+  // Lesley 11/11: just added these 2 lines
+  new_page->pte = vpage;
+  curr_process->ptable.ptes[vpage].ppage = 129;
 
   // add to the process struct map                                                                                                                                                                          
   curr_process->v_pages[vpage] = new_page;
