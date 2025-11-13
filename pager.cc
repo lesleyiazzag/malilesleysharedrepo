@@ -346,6 +346,7 @@ int vm_syslog(void *message, unsigned int len){
       vm_fault((void*)start,false);}
     ans.append((char*) pm_physmem+vpage_ptr->ppage*VM_PAGESIZE+offset,size);
     vpage = vpage+1;//if this doesn't work, add size to message and run again, subtract size from len
+    vpage_ptr = &(curr_process ->ptable.ptes[vpage]);
     len = len-size;
     start += size;
     size = min((unsigned int)VM_PAGESIZE,len);
