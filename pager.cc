@@ -24,7 +24,7 @@ struct vm_page{
 struct process{
   int pid;
   page_table_t ptable; // loop over every entry in array and set ppage field to unsigned int -1, RW fields to 0                                                                                             
-  int curr_vpage=0;
+  unsigned int curr_vpage=0;
   uintptr_t curr_addr=(uintptr_t)VM_ARENA_BASEADDR;
   map<int,vm_page*> v_pages;}; // vmfault passed in VA, determine if VA is valid. to check calculate page from address and see if that same address in map                                                  
 
@@ -340,8 +340,13 @@ int vm_syslog(void *message, unsigned int len){
   //  return -1;
   if((unsigned int)start + len<(unsigned int)start){
     return -1;}
+  if(len ==0){
+    return -1;}
   while(len>0){
     //if not resident
+    //check if valid
+    if(vpage>=curr_process->curr_vpage){
+    return -1;}
     if(vpage_ptr->ppage ==129||vpage_ptr->read_enable==0){//check read permits{
       vm_fault((void*)start,false);}
     ans.append((char*) pm_physmem+vpage_ptr->ppage*VM_PAGESIZE+offset,size);
