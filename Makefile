@@ -17,4 +17,4 @@ clean:
 	rm *~ pager sample 
 
 submit:
-	/usr/cs-local/432/bin/submit432 2 pager.cc sample.cc
+	/usr/cs-local/432/bin/submit432 2 pager.cc sample.cc test2.cc test3.cc test4.cc test5.cc test6.cc test7.cc test8.cc test9.cc test10.cc test11.cc
