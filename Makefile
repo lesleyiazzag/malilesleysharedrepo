@@ -1,8 +1,8 @@
 CXX=g++
 CFLAGS+=-Wall -Werror -g -std=c++11
 CXXFLAGS+=${CFLAGS}
-
-TESTS = test3 test5 test9 test10 test12 test13 test14 test15 test16 test17 test18 test19 test20
+ 
+TESTS = test1 test2 test3 test4 test5 test6 test7
 
 TEST_SRCS = $(addsuffix .cc, $(TESTS))
 TEST_BINS = $(TESTS)
@@ -25,4 +25,4 @@ clean:
 	rm *~ pager sample 
 
 submit:
-	/usr/cs-local/432/bin/submit432 2 pager.cc sample.cc test1.cc test2.cc test3.cc test4.cc
+	/usr/cs-local/432/bin/submit432 2 pager.cc test1.cc test2.cc test3.cc test4.cc test5.cc test6.cc test7.cc
