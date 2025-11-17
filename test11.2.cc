@@ -10,7 +10,16 @@ int main() {
     c = (char*) vm_extend();
     a[0] = 'h';
     b[0] = 'i';
-    vm_syslog(a, 2*VM_PAGESIZE+5);
-    c[0] = 'y';
+    c[0] = 't';
+    vm_syslog(a,1);
+    vm_syslog(b,1);
+    vm_syslog(c,1);
+
+    c[1] = 'h';
+    vm_syslog(a,1);
+
+    vm_syslog(b,1);
+    vm_syslog(c,1);
+
 
 }
